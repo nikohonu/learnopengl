@@ -1,69 +1,40 @@
-/*
- * This example code creates an SDL window and renderer, and then clears the
- * window to a different color every frame, so you'll effectively get a window
- * that's smoothly fading between colors.
- *
- * This code is public domain. Feel free to use it for any purpose!
- */
+#include <glad/glad.h>
 
-#define SDL_MAIN_USE_CALLBACKS 1 /* use the callbacks instead of main() */
-#include <SDL3/SDL.h>
-#include <SDL3/SDL_main.h>
+#include <GLFW/glfw3.h>
+#include <expected>
+#include <print>
 
-/* We will use this renderer to draw into this window every frame. */
-static SDL_Window *window = NULL;
-static SDL_Renderer *renderer = NULL;
+auto app_main() -> std::expected<int, std::string> {
+  // init glfw
+  glfwInit();
+  // setup major version of opengl >3<.3
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+  // setup minor version of opengl 3.>3<
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+  // explicitly use the core-profile, without backwards-compatible features
+  glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-/* This function runs once at startup. */
-SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
-  SDL_SetAppMetadata("Example Renderer Clear", "1.0",
-                     "com.example.renderer-clear");
+  GLFWwindow *window = glfwCreateWindow(800, 600, "LearnOpenGL", NULL, NULL);
 
-  if (!SDL_Init(SDL_INIT_VIDEO)) {
-    SDL_Log("Couldn't initialize SDL: %s", SDL_GetError());
-    return SDL_APP_FAILURE;
+  if (window == NULL) {
+    glfwTerminate();
+    return std::unexpected("Failed to create GLFW window");
   }
 
-  if (!SDL_CreateWindowAndRenderer("examples/renderer/clear", 640, 480, 0,
-                                   &window, &renderer)) {
-    SDL_Log("Couldn't create window/renderer: %s", SDL_GetError());
-    return SDL_APP_FAILURE;
+  glfwMakeContextCurrent(window);
+
+  if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+    return std::unexpected("Failed to initialize GLAD");
   }
 
-  return SDL_APP_CONTINUE; /* carry on with the program! */
+  return 0;
 }
 
-/* This function runs when a new event (mouse input, keypresses, etc) occurs. */
-SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
-  if (event->type == SDL_EVENT_QUIT) {
-    return SDL_APP_SUCCESS; /* end the program, reporting success to the OS. */
+auto main() -> int {
+  if (auto result = app_main(); result.has_value()) {
+    return result.value();
+  } else {
+    std::println("Error: {}", result.error());
+    return -1;
   }
-  return SDL_APP_CONTINUE; /* carry on with the program! */
-}
-
-/* This function runs once per frame, and is the heart of the program. */
-SDL_AppResult SDL_AppIterate(void *appstate) {
-  const double now = ((double)SDL_GetTicks()) /
-                     1000.0; /* convert from milliseconds to seconds. */
-  /* choose the color for the frame we will draw. The sine wave trick makes it
-   * fade between colors smoothly. */
-  const float red = (float)(0.5 + 0.5 * SDL_sin(now));
-  const float green = (float)(0.5 + 0.5 * SDL_sin(now + SDL_PI_D * 2 / 3));
-  const float blue = (float)(0.5 + 0.5 * SDL_sin(now + SDL_PI_D * 4 / 3));
-  SDL_SetRenderDrawColorFloat(
-      renderer, red, green, blue,
-      SDL_ALPHA_OPAQUE_FLOAT); /* new color, full alpha. */
-
-  /* clear the window to the draw color. */
-  SDL_RenderClear(renderer);
-
-  /* put the newly-cleared rendering on the screen. */
-  SDL_RenderPresent(renderer);
-
-  return SDL_APP_CONTINUE; /* carry on with the program! */
-}
-
-/* This function runs once at shutdown. */
-void SDL_AppQuit(void *appstate, SDL_AppResult result) {
-  /* SDL will clean up the window/renderer for us. */
 }
